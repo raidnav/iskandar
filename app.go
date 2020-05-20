@@ -28,13 +28,13 @@ func main() {
 	db := infrastructures.Connect(dbConf, log)
 	defer infrastructures.DisConnect(db)
 
-	bookingAccessor := postgres.NewPostgresBookingSchema(db, log)
+	bookingAccessor := postgres.NewBookingSchema(db)
 
 	bookingSvc := services.NewBookingService(bookingAccessor, log)
 
 	booking := server.Group("/booking")
 	{
-		handler := handlers.NewBookingHandler(bookingSvc, log)
+		handler := handlers.NewBookingHandler(bookingSvc)
 		booking.POST("", handler.Book())
 		booking.GET("/", handler.Fetch())
 		booking.PUT("/", handler.Modify())

@@ -1,17 +1,16 @@
 package handlers
 
 import (
+	"github.com/code-and-chill/iskandar/constants"
 	"github.com/code-and-chill/iskandar/repositories/models"
 	"github.com/code-and-chill/iskandar/services"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 )
 
 type BookingHandler struct {
 	bookingSvc services.BookingService
-	log        logrus.FieldLogger
 }
 
 type BookingController interface {
@@ -21,69 +20,52 @@ type BookingController interface {
 	Cancel() gin.HandlerFunc
 }
 
-func NewBookingHandler(bookingSvc services.BookingService, log logrus.FieldLogger) BookingController {
+func NewBookingHandler(bookingSvc services.BookingService) BookingController {
 	return &BookingHandler{
 		bookingSvc: bookingSvc,
-		log:        log,
 	}
 }
 
 func (b BookingHandler) Book() gin.HandlerFunc {
 	return func(context *gin.Context) {
+		w := ResponseWriter{ctx: context}
 		var bookingData models.Booking
 		parseError := context.BindJSON(&bookingData)
 		if parseError != nil {
-			b.log.Warn("Error when parsing json: ", parseError.Error())
+			w.Message(http.StatusBadRequest, "Invalid booking spec")
 		}
 		err := b.bookingSvc.Book(bookingData)
 		if err != nil {
-			context.JSON(500, gin.H{
-				"code":    http.StatusInternalServerError,
-				"message": "There was an unexpected error during creating a booking",
-			})
+			w.Message(http.StatusInternalServerError, "There was an unexpected error during creating a booking")
 		} else {
-			context.JSON(200, gin.H{
-				"code":    http.StatusCreated,
-				"message": "Booking Successfully created",
-			})
+			w.Data(http.StatusOK, nil)
 		}
 	}
 }
 
 func (b BookingHandler) Fetch() gin.HandlerFunc {
 	return func(context *gin.Context) {
+		w := ResponseWriter{ctx: context}
 		bookingId, exist := context.Params.Get("id")
 		if !exist {
-			context.JSON(400, gin.H{
-				"code":    http.StatusBadRequest,
-				"message": "Id not provided",
-			})
+			w.Message(http.StatusBadRequest, "Id not provided")
 		} else {
 			id, numError := strconv.Atoi(bookingId)
 			if numError != nil {
-				b.log.Warn("Unable to convert bookingId: " + bookingId)
+				w.Message(http.StatusBadRequest, "Unable to convert bookingId: "+bookingId)
 			}
 
 			booking, err := b.bookingSvc.Fetch(id)
 
 			if err != nil {
 				switch err.Error() {
-				case "NOT_FOUND":
-					context.JSON(404, gin.H{
-						"code": http.NotFound,
-						"data": nil,
-					})
+				case constants.DbNotFound:
+					w.Message(http.StatusNotFound, "Booking Id was not found")
 				default:
-					context.JSON(500, gin.H{
-						"code":    http.StatusInternalServerError,
-						"message": "There was an unexpected error during getting booking data",
-					})
+					w.Message(http.StatusInternalServerError, "There was an unexpected error during getting booking data")
 				}
 			} else {
-				context.JSON(200, gin.H{
-					"code": http.StatusOK,
-					"data": booking,
-				})
+				w.Data(http.StatusOK, booking)
 			}
 		}
 	}
@@ -91,31 +73,22 @@ func (b BookingHandler) Fetch() gin.HandlerFunc {
 
 func (b BookingHandler) Modify() gin.HandlerFunc {
 	return func(context *gin.Context) {
+		w := ResponseWriter{ctx: context}
 		bookingId, idExist := context.Params.Get("id")
 		status, statusExist := context.Params.Get("status")
 		if !(idExist || statusExist) {
-			context.JSON(400, gin.H{
-				"code":    http.StatusBadRequest,
-				"message": "Either booking id or status is not provided",
-			})
+			w.Message(http.StatusBadRequest, "Either booking id or status is not provided")
 		} else {
 			id, numError := strconv.Atoi(bookingId)
 			if numError != nil {
-				b.log.Warn("Unable to convert bookingId: " + bookingId)
+				w.Message(http.StatusBadRequest, "Unable to convert bookingId: "+bookingId)
 			}
 
-			booking, err := b.bookingSvc.Modify(id, status)
-
+			err := b.bookingSvc.Modify(id, status)
 			if err != nil {
-				context.JSON(500, gin.H{
-					"code":    http.StatusInternalServerError,
-					"message": "There was an unexpected error during getting booking data",
-				})
+				w.Message(http.StatusInternalServerError, "There was an unexpected error during getting booking data")
 			} else {
-				context.JSON(200, gin.H{
-					"code": http.StatusOK,
-					"data": booking,
-				})
+				w.Data(http.StatusOK, nil)
 			}
 		}
 	}
@@ -123,39 +96,28 @@ func (b BookingHandler) Modify() gin.HandlerFunc {
 
 func (b BookingHandler) Cancel() gin.HandlerFunc {
 	return func(context *gin.Context) {
+		w := ResponseWriter{ctx: context}
 		bookingId, exist := context.Params.Get("id")
 		reason, reasonExist := context.Params.Get("reason")
 		if !(exist || reasonExist) {
-			context.JSON(400, gin.H{
-				"code":    http.StatusBadRequest,
-				"message": "Either booking id or reason is not provided",
-			})
+			w.Message(http.StatusBadRequest, "Either booking id or reason is not provided")
 		} else {
 			id, numError := strconv.Atoi(bookingId)
 			if numError != nil {
-				b.log.Warn("Unable to convert bookingId: " + bookingId)
+				w.Message(http.StatusBadRequest, "Unable to convert bookingId: "+bookingId)
 			}
 
-			booking, err := b.bookingSvc.Cancel(id, reason)
+			err := b.bookingSvc.Cancel(id, reason)
 
 			if err != nil {
 				switch err.Error() {
-				case "NOT_FOUND":
-					context.JSON(404, gin.H{
-						"code": http.NotFound,
-						"data": nil,
-					})
+				case constants.DbNotFound:
+					w.Message(http.StatusNotFound, "Requested booking id was not found")
 				default:
-					context.JSON(500, gin.H{
-						"code":    http.StatusInternalServerError,
-						"message": "There was an unexpected error during getting booking data",
-					})
+					w.Message(http.StatusInternalServerError, "There was an unexpected error during cancelling booking")
 				}
 			} else {
-				context.JSON(200, gin.H{
-					"code": http.StatusOK,
-					"data": booking,
-				})
+				w.Data(http.StatusNoContent, nil)
 			}
 		}
 	}
