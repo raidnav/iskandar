@@ -1,6 +1,6 @@
-package repositories
+package repository
 
-import "github.com/code-and-chill/iskandar/repositories/models"
+import "github.com/code-and-chill/iskandar/repository/models"
 
 type Booking interface {
 	Fetch(id int) models.Booking

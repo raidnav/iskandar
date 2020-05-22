@@ -2,8 +2,8 @@ package postgres
 
 import (
 	"errors"
-	"github.com/code-and-chill/iskandar/constants"
-	"github.com/code-and-chill/iskandar/repositories/models"
+	"github.com/code-and-chill/iskandar/constant"
+	"github.com/code-and-chill/iskandar/repository/models"
 	"reflect"
 )
 import "github.com/jinzhu/gorm"
@@ -26,7 +26,7 @@ func (t *booking) Modify(id int, status string) error {
 	booking := models.Booking{}
 	t.db.Where("id = ?", id).First(&booking)
 	if (reflect.DeepEqual(booking, models.Booking{})) {
-		return errors.New(constants.DbNotFound)
+		return errors.New(constant.DbNotFound)
 	}
 	booking.Status = status
 	return t.db.Save(booking).Error

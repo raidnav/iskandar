@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/code-and-chill/iskandar/handlers"
-	"github.com/code-and-chill/iskandar/infrastructures"
-	"github.com/code-and-chill/iskandar/middlewares"
-	"github.com/code-and-chill/iskandar/repositories/postgres"
-	"github.com/code-and-chill/iskandar/services"
+	"github.com/code-and-chill/iskandar/handler"
+	"github.com/code-and-chill/iskandar/infrastructure"
+	"github.com/code-and-chill/iskandar/middleware"
+	"github.com/code-and-chill/iskandar/repository/postgres"
+	"github.com/code-and-chill/iskandar/service"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -15,9 +15,9 @@ func main() {
 	log.SetLevel(logrus.InfoLevel)
 
 	server := gin.New()
-	server.Use(middlewares.Logger(log), gin.Recovery())
+	server.Use(middleware.Logger(log), gin.Recovery())
 
-	dbConf := infrastructures.DbConfig{
+	dbConf := infrastructure.DbConfig{
 		Port:     5432,
 		Database: "transport",
 		Host:     "localhost",
@@ -25,20 +25,30 @@ func main() {
 		Password: "application",
 	}
 
-	db := infrastructures.Connect(dbConf, log)
-	defer infrastructures.DisConnect(db)
+	db := infrastructure.Connect(dbConf, log)
+	defer infrastructure.DisConnect(db)
 
 	bookingAccessor := postgres.NewBookingSchema(db)
+	paymentAccessor := postgres.NewPaymentSchema(db)
 
-	bookingSvc := services.NewBookingService(bookingAccessor, log)
+	bookingSvc := service.NewBookingService(bookingAccessor, log)
+	paymentSvc := service.NewPaymentService(paymentAccessor, log)
 
 	booking := server.Group("/booking")
 	{
-		handler := handlers.NewBookingHandler(bookingSvc)
-		booking.POST("", handler.Book())
-		booking.GET("/", handler.Fetch())
-		booking.PUT("/", handler.Modify())
-		booking.DELETE("/", handler.Cancel())
+		bkHandler := handler.NewBookingHandler(bookingSvc)
+		booking.POST("", bkHandler.Book())
+		booking.GET("/", bkHandler.Fetch())
+		booking.PUT("/", bkHandler.Modify())
+		booking.DELETE("/", bkHandler.Cancel())
+	}
+
+	payment := server.Group("/payment")
+	{
+		pgHandler := handler.NewPaymentHandler(paymentSvc)
+		payment.GET("/", pgHandler.GenerateRequestSpec())
+		payment.POST("", pgHandler.Pay())
+		payment.DELETE("/", pgHandler.Cancel())
 	}
 
 	err := server.Run(":8080")

@@ -1,10 +1,10 @@
-package services
+package service
 
 import (
 	"errors"
-	"github.com/code-and-chill/iskandar/constants"
-	"github.com/code-and-chill/iskandar/repositories"
-	"github.com/code-and-chill/iskandar/repositories/models"
+	"github.com/code-and-chill/iskandar/constant"
+	"github.com/code-and-chill/iskandar/repository"
+	"github.com/code-and-chill/iskandar/repository/models"
 	"github.com/sirupsen/logrus"
 	"reflect"
 )
@@ -17,7 +17,7 @@ type BookingService interface {
 }
 
 type Booking struct {
-	bookingAccessor repositories.Booking
+	bookingAccessor repository.Booking
 	logger          logrus.FieldLogger
 }
 
@@ -29,7 +29,7 @@ func (b *Booking) Book(bookingSpec models.Booking) error {
 func (b *Booking) Fetch(id int) (models.Booking, error) {
 	booking := b.bookingAccessor.Fetch(id)
 	if reflect.DeepEqual(booking, models.Booking{}) {
-		return models.Booking{}, errors.New(constants.DbNotFound)
+		return models.Booking{}, errors.New(constant.DbNotFound)
 	}
 	return booking, nil
 }
@@ -42,7 +42,7 @@ func (b *Booking) Cancel(id int, status string) error {
 	return b.bookingAccessor.Modify(id, status)
 }
 
-func NewBookingService(bookingAccessor repositories.Booking, logger logrus.FieldLogger) BookingService {
+func NewBookingService(bookingAccessor repository.Booking, logger logrus.FieldLogger) BookingService {
 	return &Booking{
 		bookingAccessor: bookingAccessor,
 		logger:          logger,

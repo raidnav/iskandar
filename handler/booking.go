@@ -1,16 +1,16 @@
-package handlers
+package handler
 
 import (
-	"github.com/code-and-chill/iskandar/constants"
-	"github.com/code-and-chill/iskandar/repositories/models"
-	"github.com/code-and-chill/iskandar/services"
+	"github.com/code-and-chill/iskandar/constant"
+	"github.com/code-and-chill/iskandar/repository/models"
+	"github.com/code-and-chill/iskandar/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
 type BookingHandler struct {
-	bookingSvc services.BookingService
+	bookingSvc service.BookingService
 }
 
 type BookingController interface {
@@ -20,7 +20,7 @@ type BookingController interface {
 	Cancel() gin.HandlerFunc
 }
 
-func NewBookingHandler(bookingSvc services.BookingService) BookingController {
+func NewBookingHandler(bookingSvc service.BookingService) BookingController {
 	return &BookingHandler{
 		bookingSvc: bookingSvc,
 	}
@@ -59,7 +59,7 @@ func (b BookingHandler) Fetch() gin.HandlerFunc {
 
 			if err != nil {
 				switch err.Error() {
-				case constants.DbNotFound:
+				case constant.DbNotFound:
 					w.Message(http.StatusNotFound, "Booking Id was not found")
 				default:
 					w.Message(http.StatusInternalServerError, "There was an unexpected error during getting booking data")
@@ -111,7 +111,7 @@ func (b BookingHandler) Cancel() gin.HandlerFunc {
 
 			if err != nil {
 				switch err.Error() {
-				case constants.DbNotFound:
+				case constant.DbNotFound:
 					w.Message(http.StatusNotFound, "Requested booking id was not found")
 				default:
 					w.Message(http.StatusInternalServerError, "There was an unexpected error during cancelling booking")
