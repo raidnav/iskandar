@@ -22,7 +22,6 @@ type Booking struct {
 }
 
 func (b *Booking) Book(bookingSpec models.Booking) error {
-
 	return b.bookingAccessor.Create(bookingSpec)
 }
 

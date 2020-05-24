@@ -1,22 +1,15 @@
-package infrastructure
+package infra
 
 import (
 	"fmt"
+	"github.com/code-and-chill/iskandar/config"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sirupsen/logrus"
 	"net/url"
 )
 
-type DbConfig struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-}
-
-func Connect(db DbConfig, log logrus.FieldLogger) *gorm.DB {
+func PgConnect(db config.DBConfig, log logrus.FieldLogger) *gorm.DB {
 	builder := url.URL{
 		User:     url.UserPassword(db.Username, db.Password),
 		Scheme:   "postgres",
@@ -32,7 +25,7 @@ func Connect(db DbConfig, log logrus.FieldLogger) *gorm.DB {
 	return conn
 }
 
-func DisConnect(db *gorm.DB) {
+func PgDisconnect(db *gorm.DB) {
 	err := db.Close()
 	if err != nil {
 		logrus.Fatal("Unable to close database")

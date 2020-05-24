@@ -1,9 +1,11 @@
 package main
 
 import (
+	"github.com/code-and-chill/iskandar/config"
 	"github.com/code-and-chill/iskandar/handler"
-	"github.com/code-and-chill/iskandar/infrastructure"
+	"github.com/code-and-chill/iskandar/infra"
 	"github.com/code-and-chill/iskandar/middleware"
+	"github.com/code-and-chill/iskandar/repository/cosmosdb"
 	"github.com/code-and-chill/iskandar/repository/postgres"
 	"github.com/code-and-chill/iskandar/service"
 	"github.com/gin-gonic/gin"
@@ -17,22 +19,39 @@ func main() {
 	server := gin.New()
 	server.Use(middleware.Logger(log), gin.Recovery())
 
-	dbConf := infrastructure.DbConfig{
+	pgConf := config.DBConfig{
 		Port:     5432,
 		Database: "transport",
 		Host:     "localhost",
 		Username: "application",
 		Password: "application",
 	}
+	mongoConf := config.DBConfig{
+		Port:     10255,
+		Database: "transport",
+		Host:     "localhost",
+		Username: "application",
+		Password: "application",
+	}
 
-	db := infrastructure.Connect(dbConf, log)
-	defer infrastructure.DisConnect(db)
+	postgresClient := infra.PgConnect(pgConf, log)
+	mongoClient := infra.CosmosConnect(mongoConf, log)
 
-	bookingAccessor := postgres.NewBookingSchema(db)
-	paymentAccessor := postgres.NewPaymentSchema(db)
+	defer func() {
+		infra.PgDisconnect(postgresClient)
+		infra.CosmosDisconnect(mongoClient)
+	}()
+
+	bookingAccessor := postgres.NewBookingSchema(postgresClient)
+	paymentAccessor := postgres.NewPaymentSchema(postgresClient)
+	ticketAccessor := postgres.NewTicketSchema(postgresClient)
+
+	invoiceAccessor := cosmosdb.NewInvoiceCollection(mongoClient)
 
 	bookingSvc := service.NewBookingService(bookingAccessor, log)
 	paymentSvc := service.NewPaymentService(paymentAccessor, log)
+	ticketSvc := service.NewTicketService(ticketAccessor, log)
+	invoiceSvc := service.NewInvoiceService(invoiceAccessor, log)
 
 	booking := server.Group("/booking")
 	{
@@ -49,6 +68,20 @@ func main() {
 		payment.GET("/", pgHandler.GenerateRequestSpec())
 		payment.POST("", pgHandler.Pay())
 		payment.DELETE("/", pgHandler.Cancel())
+	}
+
+	ticket := server.Group("/ticket")
+	{
+		tkHandler := handler.NewTicketHandler(ticketSvc, bookingSvc)
+		ticket.GET("/", tkHandler.Fetch())
+		ticket.POST("/", tkHandler.Save())
+	}
+
+	invoice := server.Group("/invoice")
+	{
+		invHandler := handler.NewInvoiceHandler(invoiceSvc)
+		invoice.GET("/", invHandler.Fetch())
+		invoice.POST("/", invHandler.Save())
 	}
 
 	err := server.Run(":8080")
