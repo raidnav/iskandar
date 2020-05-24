@@ -47,8 +47,8 @@ func (p Payment) processTransfer() {
 }
 
 func (p Payment) assignIncomingPayment() {
-	from := helper.ToMillis(time.Now().Add(-3 * 24 * time.Hour))
-	to := helper.ToMillis(time.Now())
+	from := helper.TimeToMillis(time.Now().Add(-3 * 24 * time.Hour))
+	to := helper.TimeToMillis(time.Now())
 
 	p.paymentAccessor.Fetch(from, to)
 	// TODO continued later

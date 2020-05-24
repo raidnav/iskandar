@@ -53,22 +53,9 @@ func main() {
 	ticketSvc := service.NewTicketService(ticketAccessor, log)
 	invoiceSvc := service.NewInvoiceService(invoiceAccessor, log)
 
-	booking := server.Group("/booking")
-	{
-		bkHandler := handler.NewBookingHandler(bookingSvc)
-		booking.POST("", bkHandler.Book())
-		booking.GET("/", bkHandler.Fetch())
-		booking.PUT("/", bkHandler.Modify())
-		booking.DELETE("/", bkHandler.Cancel())
-	}
-
-	payment := server.Group("/payment")
-	{
-		pgHandler := handler.NewPaymentHandler(paymentSvc)
-		payment.GET("/", pgHandler.GenerateRequestSpec())
-		payment.POST("", pgHandler.Pay())
-		payment.DELETE("/", pgHandler.Cancel())
-	}
+	services := handler.NewService(bookingSvc, paymentSvc)
+	services.Booking(server)
+	services.Payment(server)
 
 	ticket := server.Group("/ticket")
 	{
