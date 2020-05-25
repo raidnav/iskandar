@@ -25,34 +25,24 @@ func main() {
 		Username: "application",
 		Password: "application",
 	}
-	//mongoConf := config.DBConfig{
-	//	Port:     27017,
-	//	Database: "INVOICE",
-	//	Host:     "localhost",
-	//	Username: "application",
-	//	Password: "application",
-	//}
 
 	postgresClient := infra.PgConnect(pgConf, log)
-	//mongoClient := infra.CosmosConnect(mongoConf, log)
 
 	defer func() {
 		infra.PgDisconnect(postgresClient)
-		//infra.CosmosDisconnect(mongoClient)
 	}()
 
 	bookingAccessor := postgres.NewBookingSchema(postgresClient)
 	paymentAccessor := postgres.NewPaymentSchema(postgresClient)
 	ticketAccessor := postgres.NewTicketSchema(postgresClient)
-
-	//invoiceAccessor := cosmosdb.NewInvoiceCollection(mongoClient)
+	invoiceAccessor := postgres.NewInvoiceSchema(postgresClient)
 
 	bookingSvc := service.NewBookingService(bookingAccessor, log)
 	paymentSvc := service.NewPaymentService(paymentAccessor, log)
 	ticketSvc := service.NewTicketService(ticketAccessor, log)
-	//invoiceSvc := service.NewInvoiceService(invoiceAccessor, log)
+	invoiceSvc := service.NewInvoiceService(invoiceAccessor, log)
 
-	interactor := handler.NewPresenter(server, bookingSvc, paymentSvc, ticketSvc, nil)
+	interactor := handler.NewPresenter(server, bookingSvc, paymentSvc, ticketSvc, invoiceSvc)
 
 	interactor.Booking()
 	interactor.Payment()
