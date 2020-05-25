@@ -8,21 +8,21 @@ import (
 )
 import "github.com/jinzhu/gorm"
 
-type booking struct {
+type Booking struct {
 	db *gorm.DB
 }
 
-func (t *booking) Fetch(id int) models.Booking {
+func (t *Booking) Fetch(id int) models.Booking {
 	var booking = models.Booking{}
 	t.db.Where("id = ?", id).First(&booking)
 	return booking
 }
 
-func (t *booking) Create(bookingSpec models.Booking) error {
+func (t *Booking) Create(bookingSpec models.Booking) error {
 	return t.db.Create(&bookingSpec).Error //TODO: need to catch idempotent error separately
 }
 
-func (t *booking) Modify(id int, status string) error {
+func (t *Booking) Modify(id int, status string) error {
 	booking := models.Booking{}
 	t.db.Where("id = ?", id).First(&booking)
 	if (reflect.DeepEqual(booking, models.Booking{})) {
@@ -32,9 +32,9 @@ func (t *booking) Modify(id int, status string) error {
 	return t.db.Save(booking).Error
 }
 
-func NewBookingSchema(db *gorm.DB) *booking {
+func NewBookingSchema(db *gorm.DB) *Booking {
 	db.AutoMigrate(&models.Booking{})
-	return &booking{
+	return &Booking{
 		db: db,
 	}
 }

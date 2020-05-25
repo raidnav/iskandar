@@ -6,31 +6,56 @@ import (
 )
 
 type Routes interface {
-	Booking(server *gin.Engine) *gin.RouterGroup
-	Payment(server *gin.Engine) *gin.RouterGroup
+	Booking() *gin.RouterGroup
+	Payment() *gin.RouterGroup
+	Ticket() *gin.RouterGroup
+	Invoice() *gin.RouterGroup
 }
 
 type Service struct {
-	book service.BookingService
-	pay  service.PaymentService
+	presenter  *gin.Engine
+	bookingSvc service.BookingService
+	paymentSvc service.PaymentService
+	ticketSvc  service.TicketService
+	invoiceSvc service.InvoiceService
 }
 
-func (s Service) Booking(server *gin.Engine) *gin.RouterGroup {
-	booking := server.Group("/booking")
+func (s Service) Ticket() *gin.RouterGroup {
+	ticket := s.presenter.Group("/ticket")
 	{
-		resolver := NewBookingHandler(s.book)
+		resolver := NewTicketHandler(s.ticketSvc, s.bookingSvc)
+		ticket.GET("/", func(context *gin.Context) { resolver.Fetch(context) })
+		ticket.POST("/", func(context *gin.Context) { resolver.Save(context) })
+	}
+	return ticket
+}
+
+func (s Service) Invoice() *gin.RouterGroup {
+	invoice := s.presenter.Group("/invoice")
+	{
+		resolver := NewInvoiceHandler(s.invoiceSvc)
+		invoice.GET("/", func(context *gin.Context) { resolver.Fetch(context) })
+		invoice.POST("/", func(context *gin.Context) { resolver.Save(context) })
+	}
+	return invoice
+}
+
+func (s Service) Booking() *gin.RouterGroup {
+	booking := s.presenter.Group("/booking")
+	{
+		resolver := NewBookingHandler(s.bookingSvc)
 		booking.POST("", func(context *gin.Context) { resolver.Book(context) })
-		booking.GET("/", func(context *gin.Context) { resolver.Fetch(context) })
-		booking.PUT("/", func(context *gin.Context) { resolver.Modify(context) })
-		booking.DELETE("/", func(context *gin.Context) { resolver.Cancel(context) })
+		booking.GET("/:id", func(context *gin.Context) { resolver.Fetch(context) })
+		booking.PUT("/:id", func(context *gin.Context) { resolver.Modify(context) })
+		booking.DELETE("/:id", func(context *gin.Context) { resolver.Cancel(context) })
 	}
 	return booking
 }
 
-func (s Service) Payment(server *gin.Engine) *gin.RouterGroup {
-	payment := server.Group("/payment")
+func (s Service) Payment() *gin.RouterGroup {
+	payment := s.presenter.Group("/payment")
 	{
-		resolver := NewPaymentHandler(s.pay)
+		resolver := NewPaymentHandler(s.paymentSvc)
 		payment.GET("/", func(context *gin.Context) { resolver.GenerateRequestSpec(context) })
 		payment.POST("", func(context *gin.Context) { resolver.Pay(context) })
 		payment.DELETE("/", func(context *gin.Context) { resolver.Cancel(context) })
@@ -38,9 +63,16 @@ func (s Service) Payment(server *gin.Engine) *gin.RouterGroup {
 	return payment
 }
 
-func NewService(booking service.BookingService, payment service.PaymentService) Routes {
+func NewPresenter(server *gin.Engine,
+	booking service.BookingService,
+	payment service.PaymentService,
+	ticket service.TicketService,
+	invoice service.InvoiceService) Routes {
 	return &Service{
-		book: booking,
-		pay:  payment,
+		presenter:  server,
+		bookingSvc: booking,
+		paymentSvc: payment,
+		ticketSvc:  ticket,
+		invoiceSvc: invoice,
 	}
 }

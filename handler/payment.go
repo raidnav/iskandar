@@ -15,22 +15,23 @@ type Payment struct {
 }
 
 type PaymentHandler interface {
-	GenerateRequestSpec(context *gin.Context) helper.ResponseWriter
-	Pay(context *gin.Context) helper.ResponseWriter
-	Cancel(context *gin.Context) helper.ResponseWriter
+	GenerateRequestSpec(context *gin.Context)
+	Pay(context *gin.Context)
+	Cancel(context *gin.Context)
 }
 
-func NewPaymentHandler(PaymentSvc service.PaymentService) PaymentHandler {
+func NewPaymentHandler(paymentSvc service.PaymentService) PaymentHandler {
 	return &Payment{
-		paymentSvc: PaymentSvc,
+		paymentSvc: paymentSvc,
 	}
 }
 
-func (b Payment) GenerateRequestSpec(context *gin.Context) helper.ResponseWriter {
-	w := helper.ResponseWriter{ctx: context}
+func (p Payment) GenerateRequestSpec(context *gin.Context) {
+	w := helper.ResponseWriter{Context: context}
 	userAccountNo, keyFound := context.Params.Get("accountNo")
 	if keyFound != false {
-		return w.Message(http.StatusBadRequest, "accountNo is not found")
+		w.Message(http.StatusBadRequest, "accountNo is not found")
+		return
 	}
 	resp := struct {
 		account    string
@@ -38,52 +39,56 @@ func (b Payment) GenerateRequestSpec(context *gin.Context) helper.ResponseWriter
 	}{
 		account: "311" + userAccountNo,
 		stepByStep: "1. Open up your mobile banking app\n" +
-			"2. Go to payment\n" +
+			"2. Go to paymentSvc\n" +
 			"3. Select other providers\n4. Add above numbers.\n" +
 			"5. Pay",
 	}
-	return w.Data(http.StatusOK, resp)
+	w.Data(http.StatusOK, resp)
 }
 
-func (b Payment) Pay(context *gin.Context) helper.ResponseWriter {
-	w := helper.ResponseWriter{ctx: context}
+func (p Payment) Pay(context *gin.Context) {
+	w := helper.ResponseWriter{Context: context}
 	var paymentData models.Payment
 	parseError := context.BindJSON(&paymentData)
 	if parseError != nil {
 		w.Message(http.StatusBadRequest, "Invalid Payment spec")
+		return
 	}
-	err := b.paymentSvc.Pay(paymentData)
+	err := p.paymentSvc.Pay(paymentData)
 	if err != nil {
-		if err.Error() == constant.UnsuccessfulPayment {
-			w.Message(http.StatusNotModified, "Client hasn't complete the payment")
-			return w
+		switch err.Error() {
+		case constant.UnsuccessfulPayment:
+			w.Message(http.StatusNotModified, "Client hasn't complete the paymentSvc")
+		default:
+			w.Message(http.StatusInternalServerError, "There was an unexpected error during creating a Payment")
 		}
-		w.Message(http.StatusInternalServerError, "There was an unexpected error during creating a Payment")
-		return w
+		return
 	}
 	w.Data(http.StatusOK, nil)
-	return w
 }
 
-func (b Payment) Cancel(context *gin.Context) helper.ResponseWriter {
-	w := helper.ResponseWriter{ctx: context}
+func (p Payment) Cancel(context *gin.Context) {
+	w := helper.ResponseWriter{Context: context}
 	paymentId, keyFound := context.Params.Get("id")
 	if !keyFound {
-		return w.Message(http.StatusBadRequest, "Payment id is not provided")
+		w.Message(http.StatusBadRequest, "Payment id is not provided")
+		return
 	}
 	id, parseErr := strconv.Atoi(paymentId)
 	if parseErr != nil {
-		return w.Message(http.StatusBadRequest, "Payment seems contains ineligible character.")
+		w.Message(http.StatusBadRequest, "Payment seems contains ineligible character.")
+		return
 	}
 
-	err := b.paymentSvc.Cancel(id)
+	err := p.paymentSvc.Cancel(id)
 	if err != nil {
 		switch err.Error() {
 		case constant.DbNotFound:
-			return w.Message(http.StatusNotFound, "Payment id is not exist in our data store")
+			w.Message(http.StatusNotFound, "Payment id is not exist in our data store")
 		default:
-			return w.Message(http.StatusInternalServerError, "There's an error when updating payment id: "+paymentId)
+			w.Message(http.StatusInternalServerError, "There's an error when updating paymentSvc id: "+paymentId)
 		}
+		return
 	}
-	return w.Data(http.StatusOK, nil)
+	w.Data(http.StatusOK, nil)
 }

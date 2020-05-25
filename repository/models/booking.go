@@ -1,12 +1,12 @@
 package models
 
 type Booking struct {
-	Id        int           `json:"id" binding:"required"`
-	UserId    string        `json:"user_id" binding:"required"`
-	Detail    BookingDetail `json:"booking_detail" binding:"required"`
-	TotalFare float32       `json:"total_fare" binding:"required"`
-	Status    string        `json:"status" binding:"required"`
-	Notes     string        `json:"notes"`
+	Id        int             `json:"id" binding:"required"`
+	UserId    string          `json:"user_id" binding:"required"`
+	Detail    []BookingDetail `json:"booking_detail" binding:"required"`
+	TotalFare float32         `json:"total_fare" binding:"required"`
+	Status    string          `json:"status" binding:"required"`
+	Notes     string          `json:"notes"`
 }
 
 type BookingDetail struct {

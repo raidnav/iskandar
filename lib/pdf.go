@@ -1,4 +1,4 @@
-package helper
+package lib
 
 func GeneratePdf() {
 	// TODO: impl

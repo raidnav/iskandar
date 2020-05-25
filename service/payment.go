@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/code-and-chill/iskandar/constant"
-	"github.com/code-and-chill/iskandar/helper"
+	"github.com/code-and-chill/iskandar/lib"
 	pg "github.com/code-and-chill/iskandar/provider/payment-gateway"
 	"github.com/code-and-chill/iskandar/repository"
 	"github.com/code-and-chill/iskandar/repository/models"
@@ -14,8 +14,8 @@ import (
 type PaymentService interface {
 	Pay(PaymentSpec models.Payment) error
 	Cancel(id int) error
-	processTransfer()
-	assignIncomingPayment()
+	ProcessTransfer()
+	AssignIncomingPayment()
 }
 
 type Payment struct {
@@ -42,13 +42,13 @@ func (p Payment) Cancel(id int) error {
 	return p.paymentAccessor.Cancel(id)
 }
 
-func (p Payment) processTransfer() {
+func (p Payment) ProcessTransfer() {
 	panic("implement me")
 }
 
-func (p Payment) assignIncomingPayment() {
-	from := helper.TimeToMillis(time.Now().Add(-3 * 24 * time.Hour))
-	to := helper.TimeToMillis(time.Now())
+func (p Payment) AssignIncomingPayment() {
+	from := lib.TimeToMillis(time.Now().Add(-3 * 24 * time.Hour))
+	to := lib.TimeToMillis(time.Now())
 
 	p.paymentAccessor.Fetch(from, to)
 	// TODO continued later

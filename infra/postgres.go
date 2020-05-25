@@ -21,7 +21,7 @@ func PgConnect(db config.DBConfig, log logrus.FieldLogger) *gorm.DB {
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Unable to connect postgres with host: %s, with error\n%s", db.Host, err.Error()))
 	}
-	log.Info(fmt.Sprintf("Database connected successfully."))
+	log.Info(fmt.Sprintf("[Postgres] Started..."))
 	return conn
 }
 

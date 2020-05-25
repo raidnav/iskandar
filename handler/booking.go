@@ -15,10 +15,10 @@ type Booking struct {
 }
 
 type BookingHandler interface {
-	Book(context *gin.Context) helper.ResponseWriter
-	Fetch(context *gin.Context) helper.ResponseWriter
-	Modify(context *gin.Context) helper.ResponseWriter
-	Cancel(context *gin.Context) helper.ResponseWriter
+	Book(context *gin.Context)
+	Fetch(context *gin.Context)
+	Modify(context *gin.Context)
+	Cancel(context *gin.Context)
 }
 
 func NewBookingHandler(bookingSvc service.BookingService) BookingHandler {
@@ -27,32 +27,39 @@ func NewBookingHandler(bookingSvc service.BookingService) BookingHandler {
 	}
 }
 
-func (b Booking) Book(context *gin.Context) helper.ResponseWriter {
+func (b Booking) Book(context *gin.Context) {
 	w := helper.ResponseWriter{Context: context}
 	var bookingData models.Booking
 	parseError := context.BindJSON(&bookingData)
 	if parseError != nil {
-		return w.Message(http.StatusBadRequest, "Invalid booking spec")
+		w.Message(http.StatusBadRequest, "Invalid bookingSvc spec. \n"+parseError.Error())
+		return
 	}
 	err := b.bookingSvc.Book(bookingData)
 	if err != nil {
-		w.Message(http.StatusInternalServerError, "There was an unexpected error during creating a booking")
+		switch err.Error() {
+		case "pq: duplicate key value violates unique constraint \"bookings_pkey\"":
+			w.Message(http.StatusUnprocessableEntity, "Duplicate data requested")
+		default:
+			w.Message(http.StatusInternalServerError, err.Error())
+		}
 	} else {
 		w.Data(http.StatusOK, nil)
 	}
-	return w
 }
 
-func (b Booking) Fetch(context *gin.Context) helper.ResponseWriter {
+func (b Booking) Fetch(context *gin.Context) {
 	w := helper.ResponseWriter{Context: context}
 	bookingId, exist := context.Params.Get("id")
 	if !exist {
-		return w.Message(http.StatusBadRequest, "Id not provided")
+		w.Message(http.StatusBadRequest, "Id not provided")
+		return
 	}
 
 	id, numError := strconv.Atoi(bookingId)
 	if numError != nil {
 		w.Message(http.StatusBadRequest, "Unable to convert bookingId: "+bookingId)
+		return
 	}
 
 	booking, err := b.bookingSvc.Fetch(id)
@@ -62,20 +69,20 @@ func (b Booking) Fetch(context *gin.Context) helper.ResponseWriter {
 		case constant.DbNotFound:
 			w.Message(http.StatusNotFound, "Booking Id was not found")
 		default:
-			w.Message(http.StatusInternalServerError, "There was an unexpected error during getting booking data")
+			w.Message(http.StatusInternalServerError, "There was an unexpected error during getting bookingSvc data")
 		}
 	} else {
 		w.Data(http.StatusOK, booking)
 	}
-	return w
 }
 
-func (b Booking) Modify(context *gin.Context) helper.ResponseWriter {
+func (b Booking) Modify(context *gin.Context) {
 	w := helper.ResponseWriter{Context: context}
 	bookingId, idExist := context.Params.Get("id")
-	status, statusExist := context.Params.Get("status")
-	if !(idExist || statusExist) {
-		return w.Message(http.StatusBadRequest, "Either booking id or status is not provided")
+	status := context.PostForm("status")
+	if !(idExist || status != "") {
+		w.Message(http.StatusBadRequest, "Either bookingSvc id or status is not provided")
+		return
 	}
 	id, numError := strconv.Atoi(bookingId)
 	if numError != nil {
@@ -84,23 +91,24 @@ func (b Booking) Modify(context *gin.Context) helper.ResponseWriter {
 
 	err := b.bookingSvc.Modify(id, status)
 	if err != nil {
-		w.Message(http.StatusInternalServerError, "There was an unexpected error during getting booking data")
+		w.Message(http.StatusInternalServerError, "There was an unexpected error during getting bookingSvc data")
 	} else {
 		w.Data(http.StatusOK, nil)
 	}
-	return w
 }
 
-func (b Booking) Cancel(context *gin.Context) helper.ResponseWriter {
+func (b Booking) Cancel(context *gin.Context) {
 	w := helper.ResponseWriter{Context: context}
 	bookingId, exist := context.Params.Get("id")
-	reason, reasonExist := context.Params.Get("reason")
-	if !(exist || reasonExist) {
-		return w.Message(http.StatusBadRequest, "Either booking id or reason is not provided")
+	reason := context.PostForm("reason")
+	if !(exist || reason != "") {
+		w.Message(http.StatusBadRequest, "Either bookingSvc id or reason is not provided")
+		return
 	}
 	id, numError := strconv.Atoi(bookingId)
 	if numError != nil {
 		w.Message(http.StatusBadRequest, "Unable to convert bookingId: "+bookingId)
+		return
 	}
 
 	err := b.bookingSvc.Cancel(id, reason)
@@ -108,12 +116,11 @@ func (b Booking) Cancel(context *gin.Context) helper.ResponseWriter {
 	if err != nil {
 		switch err.Error() {
 		case constant.DbNotFound:
-			w.Message(http.StatusNotFound, "Requested booking id was not found")
+			w.Message(http.StatusNotFound, "Requested bookingSvc id was not found")
 		default:
-			w.Message(http.StatusInternalServerError, "There was an unexpected error during cancelling booking")
+			w.Message(http.StatusInternalServerError, "There was an unexpected error during cancelling bookingSvc")
 		}
 	} else {
 		w.Data(http.StatusNoContent, nil)
 	}
-	return w
 }

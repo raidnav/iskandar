@@ -5,29 +5,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type InvoiceHandler struct {
+type Invoice struct {
 	invoiceSvc service.InvoiceService
 }
 
+func (i Invoice) Save(context *gin.Context) {
+	panic("implement me")
+}
+
+func (i Invoice) Fetch(context *gin.Context) {
+	panic("implement me")
+}
+
 type InvoiceController interface {
-	Save() gin.HandlerFunc
-	Fetch() gin.HandlerFunc
+	Save(context *gin.Context)
+	Fetch(context *gin.Context)
 }
 
 func NewInvoiceHandler(invoiceSvc service.InvoiceService) InvoiceController {
-	return &InvoiceHandler{
+	return &Invoice{
 		invoiceSvc: invoiceSvc,
-	}
-}
-
-func (i InvoiceHandler) Save() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		// TODO: impl
-	}
-}
-
-func (i InvoiceHandler) Fetch() gin.HandlerFunc {
-	return func(context *gin.Context) {
-		// TODO: impl
 	}
 }
